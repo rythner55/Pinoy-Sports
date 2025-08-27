@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aquatic Rush - Swimming Championship</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #4682B4 50%, #191970 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .game-title {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .control-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .pool-container {
+            position: absolute;
+            top: 120px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, #20B2AA, #008B8B, #006666);
+            overflow: hidden;
+        }
+
+        .water-effects {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+                radial-gradient(circle at 80% 60%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.06) 3px, transparent 3px);
+            animation: waterRipple 4s ease-in-out infinite;
+        }
+
+        @keyframes waterRipple {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-10px); }
+        }
+
+        .lane {
+            position: absolute;
+            height: calc(100% / 4);
+            width: 100%;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+        }
+
+        .lane:nth-child(1) { top: 0; background: rgba(255, 105, 180, 0.1); }
+        .lane:nth-child(2) { top: 25%; background: rgba(255, 215, 0, 0.1); }
+        .lane:nth-child(3) { top: 50%; background: rgba(50, 205, 50, 0.1); }
+        .lane:nth-child(4) { top: 75%; background: rgba(30, 144, 255, 0.1); }
+
+        .swimmer {
+            position: absolute;
+            left: 50px;
+            width: 40px;
+            height: 25px;
+            transition: left 0.15s ease;
+            z-index: 10;
+        }
+
+        .swimmer-body {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .swimmer1 .swimmer-body { background: linear-gradient(45deg, #FF69B4, #FF1493); }
+        .swimmer2 .swimmer-body { background: linear-gradient(45deg, #FFD700, #FFA500); }
+        .swimmer3 .swimmer-body { background: linear-gradient(45deg, #32CD32, #00FF00); }
+        .swimmer4 .swimmer-body { background: linear-gradient(45deg, #1E90FF, #0066CC); }
+
+        .swimmer-wake {
+            position: absolute;
+            right: 45px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .swimmer.moving .swimmer-wake {
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), transparent);
+            border-radius: 2px;
+            opacity: 1;
+        }
+
+        .swimmer.moving .swimmer-body {
+            animation: swim 0.3s ease-in-out infinite alternate;
+        }
+
+        @keyframes swim {
+            0% { transform: rotate(-5deg) scaleX(1); }
+            100% { transform: rotate(5deg) scaleX(1.1); }
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #FF4500, #DC143C);
+            border-radius: 50%;
+            border: 3px solid #8B0000;
+            animation: float 2s ease-in-out infinite alternate;
+            box-shadow: 0 0 20px rgba(255, 69, 0, 0.6);
+            z-index: 5;
+        }
+
+        .obstacle::before {
+            content: '⚠️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(-10px) rotate(0deg); }
+            100% { transform: translateY(10px) rotate(360deg); }
+        }
+
+        .powerup {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: radial-gradient(circle, #00FF7F, #00CED1);
+            border-radius: 50%;
+            border: 2px solid #FFFF00;
+            animation: sparkle 1.5s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(0, 255, 127, 0.8);
+            z-index: 5;
+        }
+
+        .powerup::before {
+            content: '⚡';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1) rotate(0deg); box-shadow: 0 0 15px rgba(0, 255, 127, 0.8); }
+            50% { transform: scale(1.2) rotate(180deg); box-shadow: 0 0 25px rgba(255, 255, 0, 0.9); }
+        }
+
+        .finish-line {
+            position: absolute;
+            right: 80px;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            background: repeating-linear-gradient(
+                0deg,
+                #000 0px,
+                #000 20px,
+                #FFF 20px,
+                #FFF 40px
+            );
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 15;
+        }
+
+        .finish-line::before {
+            content: 'FINISH';
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%) rotate(90deg);
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .race-results {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .results-content {
+            background: linear-gradient(145deg, #4682B4, #1E90FF);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+        }
+
+        .results-title {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: end;
+            gap: 10px;
+            margin: 30px 0;
+        }
+
+        .podium-place {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+            border-radius: 10px;
+            padding: 20px 15px;
+            min-width: 100px;
+            position: relative;
+            border: 3px solid #DAA520;
+        }
+
+        .podium-place.first {
+            height: 120px;
+            background: linear-gradient(145deg, #FFD700, #DAA520);
+            border-color: #B8860B;
+            animation: winner 1s ease-in-out infinite alternate;
+        }
+
+        .podium-place.second {
+            height: 100px;
+            background: linear-gradient(145deg, #C0C0C0, #A0A0A0);
+            border-color: #808080;
+        }
+
+        .podium-place.third {
+            height: 80px;
+            background: linear-gradient(145deg, #CD7F32, #8B4513);
+            border-color: #A0522D;
+        }
+
+        @keyframes winner {
+            0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            100% { transform: scale(1.05); box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+        }
+
+        .place-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .place-player {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .restart-btn {
+            background: linear-gradient(145deg, #32CD32, #228B22);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50px;
+            right: 80px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #32CD32, #00FF00);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-title">🏊‍♂️ Aquatic Rush Championship 🏆</div>
+            <div class="controls-info">
+                <div class="control-item">Player 1: W to Dodge</div>
+                <div class="control-item">Player 2: L to Dodge</div>
+                <div class="control-item">Player 3: ↑ to Dodge</div>
+                <div class="control-item">Player 4: Click to Dodge</div>
+            </div>
+        </div>
+
+        <div class="pool-container">
+            <div class="water-effects"></div>
+            
+            <div class="lane">
+                <div class="swimmer swimmer1" id="swimmer1">
+                    <div class="swimmer-body"></div>
+                    <div class="swimmer-wake"></div>
+                </div>
+            </div>
+            
+            <div class="lane">
+                <div class="swimmer swimmer2" id="swimmer2">
+                    <div class="swimmer-body"></div>
+                    <div class="swimmer-wake"></div>
+                </div>
+            </div>
+            
+            <div class="lane">
+                <div class="swimmer swimmer3" id="swimmer3">
+                    <div class="swimmer-body"></div>
+                    <div class="swimmer-wake"></div>
+                </div>
+            </div>
+            
+            <div class="lane">
+                <div class="swimmer swimmer4" id="swimmer4">
+                    <div class="swimmer-body"></div>
+                    <div class="swimmer-wake"></div>
+                </div>
+            </div>
+
+            <div class="finish-line"></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="race-results" id="raceResults">
+        <div class="results-content">
+            <div class="results-title">🏆 Race Complete! 🏆</div>
+            <div class="podium" id="podium"></div>
+            <button class="restart-btn" onclick="startNewRace()">Start New Race</button>
+        </div>
+    </div>
+
+    <script>
+        class SwimmingRace {
+            constructor() {
+                this.swimmers = [
+                    { id: 'swimmer1', position: 50, speed: 0, powerup: false, stunned: false, avoiding: false, name: 'Pink Dolphin' },
+                    { id: 'swimmer2', position: 50, speed: 0, powerup: false, stunned: false, avoiding: false, name: 'Golden Wave' },
+                    { id: 'swimmer3', position: 50, speed: 0, powerup: false, stunned: false, avoiding: false, name: 'Green Lightning' },
+                    { id: 'swimmer4', position: 50, speed: 0, powerup: false, stunned: false, avoiding: false, name: 'Blue Storm' }
+                ];
+                
+                this.gameStarted = false;
+                this.gameEnded = false;
+                this.obstacles = [];
+                this.powerups = [];
+                this.finishLine = window.innerWidth - 160;
+                this.finishedPlayers = [];
+                
+                this.keys = {
+                    'KeyW': false,
+                    'KeyL': false,
+                    'ArrowUp': false,
+                    'LeftClick': false
+                };
+                
+                this.startCountdown();
+                this.setupEventListeners();
+                this.gameLoop();
+                this.spawnObstacles();
+                this.spawnPowerups();
+            }
+
+            startCountdown() {
+                let count = 3;
+                const showCount = (num) => {
+                    const countdown = document.createElement('div');
+                    countdown.className = 'countdown';
+                    countdown.textContent = num === 0 ? 'GO!' : num;
+                    document.body.appendChild(countdown);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(countdown);
+                        if (num === 0) {
+                            this.gameStarted = true;
+                        }
+                    }, 1000);
+                };
+                
+                showCount(count);
+                const interval = setInterval(() => {
+                    count--;
+                    showCount(count);
+                    if (count < 0) clearInterval(interval);
+                }, 1000);
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if (!this.gameStarted || this.gameEnded) return;
+                    
+                    if (e.code === 'KeyW') {
+                        this.avoidObstacle(0);
+                    } else if (e.code === 'KeyL') {
+                        this.avoidObstacle(1);
+                    } else if (e.code === 'ArrowUp') {
+                        this.avoidObstacle(2);
+                    }
+                });
+
+                document.addEventListener('mousedown', (e) => {
+                    if (!this.gameStarted || this.gameEnded || e.button !== 0) return;
+                    this.avoidObstacle(3);
+                });
+
+                // Auto-move swimmers forward continuously
+                this.autoMoveInterval = setInterval(() => {
+                    if (this.gameStarted && !this.gameEnded) {
+                        this.swimmers.forEach((swimmer, index) => {
+                            if (!swimmer.stunned) {
+                                this.moveSwimmerForward(index);
+                            }
+                        });
+                    }
+                }, 100);
+            }
+
+            moveSwimmerForward(index) {
+                const swimmer = this.swimmers[index];
+                const baseSpeed = swimmer.powerup ? 3 : 2;
+                
+                swimmer.position += baseSpeed;
+                
+                const element = document.getElementById(swimmer.id);
+                element.style.left = swimmer.position + 'px';
+                element.classList.add('moving');
+                
+                setTimeout(() => {
+                    element.classList.remove('moving');
+                }, 200);
+
+                this.checkCollisions(index);
+                this.checkFinish(index);
+            }
+
+            avoidObstacle(index) {
+                const swimmer = this.swimmers[index];
+                if (swimmer.stunned || swimmer.avoiding) return;
+                
+                swimmer.avoiding = true;
+                const element = document.getElementById(swimmer.id);
+                
+                // Quick dodge animation - move up then back down
+                element.style.transition = 'transform 0.3s ease';
+                element.style.transform = 'translateY(-30px)';
+                element.style.zIndex = '20';
+                
+                // Add dodge effect
+                element.style.boxShadow = '0 0 20px rgba(0, 255, 255, 0.8)';
+                
+                setTimeout(() => {
+                    element.style.transform = 'translateY(0)';
+                    element.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                    element.style.zIndex = '10';
+                    
+                    setTimeout(() => {
+                        swimmer.avoiding = false;
+                        element.style.transition = 'left 0.15s ease';
+                    }, 300);
+                }, 300);
+            }
+
+            checkCollisions(swimmerIndex) {
+                const swimmer = this.swimmers[swimmerIndex];
+                const swimmerRect = {
+                    left: swimmer.position,
+                    right: swimmer.position + 40,
+                    top: swimmerIndex * (window.innerHeight - 120) / 4 + 120,
+                    bottom: swimmerIndex * (window.innerHeight - 120) / 4 + 120 + (window.innerHeight - 120) / 4
+                };
+
+                // Check obstacle collisions (only if not avoiding)
+                if (!swimmer.avoiding) {
+                    this.obstacles.forEach((obstacle, obsIndex) => {
+                        if (this.isColliding(swimmerRect, obstacle.rect)) {
+                            this.stunSwimmer(swimmerIndex);
+                            // Don't remove obstacle, let it continue moving
+                        }
+                    });
+                }
+
+                // Check powerup collisions
+                this.powerups.forEach((powerup, powIndex) => {
+                    if (this.isColliding(swimmerRect, powerup.rect)) {
+                        this.activatePowerup(swimmerIndex);
+                        this.removePowerup(powIndex);
+                    }
+                });
+            }
+
+            isColliding(rect1, rect2) {
+                return rect1.left < rect2.right &&
+                       rect1.right > rect2.left &&
+                       rect1.top < rect2.bottom &&
+                       rect1.bottom > rect2.top;
+            }
+
+            stunSwimmer(index) {
+                this.swimmers[index].stunned = true;
+                const element = document.getElementById(this.swimmers[index].id);
+                element.style.filter = 'blur(2px) opacity(0.5)';
+                
+                setTimeout(() => {
+                    this.swimmers[index].stunned = false;
+                    element.style.filter = 'none';
+                }, 2000);
+            }
+
+            activatePowerup(index) {
+                this.swimmers[index].powerup = true;
+                const element = document.getElementById(this.swimmers[index].id);
+                element.style.boxShadow = '0 0 20px #00FF00';
+                element.style.transform = 'scale(1.2)';
+                
+                setTimeout(() => {
+                    this.swimmers[index].powerup = false;
+                    element.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                    element.style.transform = 'scale(1)';
+                }, 3000);
+            }
+
+            spawnObstacles() {
+                setInterval(() => {
+                    if (!this.gameStarted || this.gameEnded) return;
+                    
+                    const lane = Math.floor(Math.random() * 4);
+                    const obstacle = document.createElement('div');
+                    obstacle.className = 'obstacle';
+                    
+                    const laneHeight = (window.innerHeight - 120) / 4;
+                    const top = 120 + lane * laneHeight + laneHeight / 2 - 30;
+                    const left = window.innerWidth - 100;
+                    
+                    obstacle.style.top = top + 'px';
+                    obstacle.style.left = left + 'px';
+                    
+                    document.querySelector('.pool-container').appendChild(obstacle);
+                    
+                    this.obstacles.push({
+                        element: obstacle,
+                        rect: { left, right: left + 60, top, bottom: top + 60 }
+                    });
+                    
+                    // Move obstacle faster for more challenge
+                    let pos = left;
+                    const moveInterval = setInterval(() => {
+                        pos -= 5; // Increased speed
+                        obstacle.style.left = pos + 'px';
+                        
+                        if (pos < -100) {
+                            clearInterval(moveInterval);
+                            this.removeObstacleElement(obstacle);
+                        }
+                        
+                        // Update collision rect
+                        const obsIndex = this.obstacles.findIndex(obs => obs.element === obstacle);
+                        if (obsIndex !== -1) {
+                            this.obstacles[obsIndex].rect.left = pos;
+                            this.obstacles[obsIndex].rect.right = pos + 60;
+                        }
+                    }, 30); // Faster update rate
+                    
+                }, 2000); // More frequent spawning
+            }
+
+            spawnPowerups() {
+                setInterval(() => {
+                    if (!this.gameStarted || this.gameEnded) return;
+                    
+                    const lane = Math.floor(Math.random() * 4);
+                    const powerup = document.createElement('div');
+                    powerup.className = 'powerup';
+                    
+                    const laneHeight = (window.innerHeight - 120) / 4;
+                    const top = 120 + lane * laneHeight + laneHeight / 2 - 17.5;
+                    const left = window.innerWidth - 100;
+                    
+                    powerup.style.top = top + 'px';
+                    powerup.style.left = left + 'px';
+                    
+                    document.querySelector('.pool-container').appendChild(powerup);
+                    
+                    this.powerups.push({
+                        element: powerup,
+                        rect: { left, right: left + 35, top, bottom: top + 35 }
+                    });
+                    
+                    // Move powerup
+                    let pos = left;
+                    const moveInterval = setInterval(() => {
+                        pos -= 2;
+                        powerup.style.left = pos + 'px';
+                        
+                        if (pos < -100) {
+                            clearInterval(moveInterval);
+                            this.removePowerupElement(powerup);
+                        }
+                        
+                        // Update collision rect
+                        const powIndex = this.powerups.findIndex(pow => pow.element === powerup);
+                        if (powIndex !== -1) {
+                            this.powerups[powIndex].rect.left = pos;
+                            this.powerups[powIndex].rect.right = pos + 35;
+                        }
+                    }, 50);
+                    
+                }, 5000);
+            }
+
+            removeObstacle(index) {
+                if (this.obstacles[index]) {
+                    this.removeObstacleElement(this.obstacles[index].element);
+                    this.obstacles.splice(index, 1);
+                }
+            }
+
+            removeObstacleElement(element) {
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            }
+
+            removePowerup(index) {
+                if (this.powerups[index]) {
+                    this.removePowerupElement(this.powerups[index].element);
+                    this.powerups.splice(index, 1);
+                }
+            }
+
+            removePowerupElement(element) {
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            }
+
+            checkFinish(index) {
+                if (this.swimmers[index].position >= this.finishLine && 
+                    !this.finishedPlayers.includes(index)) {
+                    
+                    this.finishedPlayers.push(index);
+                    
+                    if (this.finishedPlayers.length === 4) {
+                        this.endRace();
+                    }
+                }
+            }
+
+            endRace() {
+                this.gameEnded = true;
+                setTimeout(() => this.showResults(), 1000);
+            }
+
+            showResults() {
+                const podium = document.getElementById('podium');
+                podium.innerHTML = '';
+                
+                const places = ['first', 'second', 'third'];
+                const medals = ['🥇', '🥈', '🥉', '🏅'];
+                
+                this.finishedPlayers.slice(0, 3).forEach((playerIndex, place) => {
+                    const placeDiv = document.createElement('div');
+                    placeDiv.className = `podium-place ${places[place]}`;
+                    
+                    placeDiv.innerHTML = `
+                        <div class="place-number">${medals[place]} ${place + 1}${['st', 'nd', 'rd'][place]}</div>
+                        <div class="place-player">${this.swimmers[playerIndex].name}</div>
+                    `;
+                    
+                    podium.appendChild(placeDiv);
+                });
+                
+                document.getElementById('raceResults').style.display = 'flex';
+            }
+
+            gameLoop() {
+                if (!this.gameEnded) {
+                    // Update progress bar based on leading swimmer
+                    const maxPosition = Math.max(...this.swimmers.map(s => s.position));
+                    const progress = Math.min((maxPosition / this.finishLine) * 100, 100);
+                    document.getElementById('progressFill').style.width = progress + '%';
+                    
+                    requestAnimationFrame(() => this.gameLoop());
+                }
+            }
+        }
+
+        let currentRace = null;
+
+        function startNewRace() {
+            // Reset everything
+            document.getElementById('raceResults').style.display = 'none';
+            
+            // Clear existing obstacles and powerups
+            document.querySelectorAll('.obstacle, .powerup').forEach(el => el.remove());
+            
+            // Clear interval if exists
+            if (currentRace && currentRace.autoMoveInterval) {
+                clearInterval(currentRace.autoMoveInterval);
+            }
+            
+            // Reset swimmer positions
+            document.querySelectorAll('.swimmer').forEach((swimmer, index) => {
+                swimmer.style.left = '50px';
+                swimmer.style.filter = 'none';
+                swimmer.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                swimmer.style.transform = 'translateY(0) scale(1)';
+                swimmer.style.zIndex = '10';
+                swimmer.style.transition = 'left 0.15s ease';
+                swimmer.classList.remove('moving');
+            });
+            
+            // Reset progress bar
+            document.getElementById('progressFill').style.width = '0%';
+            
+            // Start new race
+            currentRace = new SwimmingRace();
+        }
+
+        // Start the first race when page loads
+        window.addEventListener('load', () => {
+            currentRace = new SwimmingRace();
+        });
+    </script>
+</body>
+</html>
